@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro CRT TV - Kartka i Podwójna Latarka</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #030303;
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .hidden-code {
+            position: absolute;
+            font-size: 18px;
+            color: #00ffcc;
+            font-weight: bold;
+            letter-spacing: 2px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            z-index: 5;
+            text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc;
+        }
+
+        #flashlight-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 50;
+            display: none;
+            background: radial-gradient(circle 280px at var(--x, 50%) var(--y, 50%), rgba(255, 255, 255, 0.22) 0%, rgba(0, 0, 0, 0.78) 100%);
+        }
+
+        #uv-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 51;
+            display: none;
+            background: radial-gradient(circle 320px at var(--x, 50%) var(--y, 50%), rgba(200, 80, 255, 0.3) 0%, rgba(10, 0, 20, 0.8) 100%);
+        }
+
+        .flashlight-hint {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(20, 20, 20, 0.9);
+            border: 1px solid #555;
+            color: #ddd;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            z-index: 100;
+            pointer-events: none;
+            line-height: 1.5;
+        }
+
+        .tv-cabinet {
+            position: relative;
+            background: linear-gradient(135deg, #2a2522 0%, #1a1614 100%);
+            border: 16px solid #141110;
+            border-radius: 35px;
+            box-shadow: 
+                0 25px 60px rgba(0,0,0,0.95),
+                inset 0 0 40px rgba(0,0,0,0.8);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 760px;
+            max-width: 95vw;
+            z-index: 10;
+        }
+
+        /* Kartka z napisem "have fun :)" w lewym górnym rogu */
+        .sticky-note {
+            position: absolute;
+            top: -22px;
+            left: 15px;
+            width: 120px;
+            height: 85px;
+            background: #fff385;
+            color: #222;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 12px 8px;
+            box-shadow: 2px 4px 10px rgba(0,0,0,0.4);
+            transform: rotate(-5deg);
+            z-index: 25;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            border-radius: 2px 2px 5px 2px;
+            pointer-events: none;
+        }
+
+        .sticky-note::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 40px;
+            width: 40px;
+            height: 10px;
+            background: rgba(255,255,255,0.5);
+            border-left: 1px dashed #ccc;
+            border-right: 1px dashed #ccc;
+        }
+
+        .tv-screen-container {
+            position: relative;
+            width: 680px;
+            max-width: 100%;
+            height: 420px;
+            background: #050505;
+            border-radius: 25px / 20px;
+            overflow: hidden;
+            border: 8px solid #0d0a09;
+            box-shadow: inset 0 0 25px rgba(0,0,0,0.9);
+        }
+
+        .tv-screen-container::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 50%, rgba(0,0,0,0.3) 100%);
+            pointer-events: none;
+            z-index: 10;
+            border-radius: 20px;
+        }
+
+        .tv-screen-container.off {
+            background: #000 !important;
+        }
+        .tv-screen-container.off .screen-content {
+            display: none !important;
+        }
+        .tv-screen-container.off::before {
+            content: "";
+            position: absolute;
+            top: 50%; left: 0; right: 0; height: 0px;
+            background: #fff;
+            box-shadow: 0 0 15px 3px #fff;
+            transform: translateY(-50%);
+            animation: turnOffAnimation 0.4s ease-out forwards;
+            z-index: 20;
+        }
+
+        @keyframes turnOffAnimation {
+            0% { height: 3px; opacity: 1; }
+            50% { height: 1px; transform: scaleX(0.5) translateY(-50%); }
+            100% { height: 0px; opacity: 0; transform: scaleX(0) translateY(-50%); }
+        }
+
+        .screen-content {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .tv-bottom-panel {
+            width: 100%;
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10px;
+        }
+
+        .tv-knobs {
+            display: flex;
+            gap: 12px;
+        }
+        .knob {
+            width: 32px;
+            height: 32px;
+            background: radial-gradient(circle, #444 30%, #111 90%);
+            border-radius: 50%;
+            border: 2px solid #222;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+            position: relative;
+        }
+        .knob::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 14px;
+            width: 4px;
+            height: 10px;
+            background: #777;
+            border-radius: 2px;
+        }
+
+        .tv-input-form {
+            display: flex;
+            gap: 8px;
+            background: rgba(0,0,0,0.4);
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid #333;
+        }
+
+        .tv-input-form input {
+            background: #111;
+            border: 1px solid #444;
+            color: #00ffcc;
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-family: inherit;
+            outline: none;
+            width: 160px;
+        }
+
+        .tv-input-form input:focus {
+            border-color: #00ffcc;
+            box-shadow: 0 0 5px rgba(0,255,204,0.3);
+        }
+
+        .tv-input-form button {
+            background: #2a2522;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 6px 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .tv-input-form button:hover {
+            background: #3a322d;
+            border-color: #00ffcc;
+            color: #00ffcc;
+        }
+
+        .tv-power-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .power-btn {
+            width: 38px;
+            height: 38px;
+            background: radial-gradient(circle, #333 40%, #111 90%);
+            border: 2px solid #222;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.7), inset 0 2px 3px rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.1s;
+        }
+        .power-btn:active {
+            transform: scale(0.92);
+        }
+        .power-icon {
+            width: 12px;
+            height: 12px;
+            border: 2px solid #777;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            position: relative;
+        }
+        .power-icon::before {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: 3px;
+            width: 2px;
+            height: 6px;
+            background: #777;
+        }
+
+        .led-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ff3b30;
+            box-shadow: 0 0 6px #ff3b30;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        .led-indicator.on {
+            background-color: #34c759;
+            box-shadow: 0 0 8px #34c759;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="flashlight-hint">
+        <b>F</b> - Standardowa latarka<br>
+        <b>R</b> - Latarka Ultra-Fiolet (UV)
+    </div>
+
+    <!-- Nakładki latarek -->
+    <div id="flashlight-overlay"></div>
+    <div id="uv-overlay"></div>
+
+    <!-- Ukryte kody w tle -->
+    <div class="hidden-code" style="top: 12%; left: 18%;">HELL</div>
+    <div class="hidden-code" style="top: 22%; right: 15%;">GOJI</div>
+    <div class="hidden-code" style="bottom: 18%; left: 12%;">SECRET_TV</div>
+
+    <div class="tv-cabinet">
+        <!-- Żółta kartka z napisem "have fun :)" -->
+        <div class="sticky-note">have fun :)</div>
+
+        <div id="screenContainer" class="tv-screen-container off">
+            <div id="screenContent" class="screen-content"></div>
+        </div>
+
+        <div class="tv-bottom-panel">
+            <div class="tv-knobs">
+                <div class="knob"></div>
+                <div class="knob"></div>
+            </div>
+
+            <div class="tv-input-form">
+                <input type="text" id="passInput" placeholder="Wpisz kod..." autocomplete="off">
+                <button onclick="checkPassword()">POKAŻ</button>
+            </div>
+
+            <div class="tv-power-section">
+                <div id="led" class="led-indicator"></div>
+                <button class="power-btn" onclick="togglePower()" title="Włącz / Wyłącz TV">
+                    <div class="power-icon"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const staticTvGif = "https://media1.tenor.com/m/88dnH_mHRLAAAAAC/static-tv-static.gif";
+        const hellGif = "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3VpcjZvNmo3MjZzajZsbTF1anZuNXZkZ2U2bXB1MHhnOGd5Y3FmdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ijWl6vsPc5giyQyskE/giphy.gif";
+
+        let isPoweredOn = false;
+        let flashlightOn = false;
+        let uvLightOn = false;
+
+        const overlay = document.getElementById('flashlight-overlay');
+        const uvOverlay = document.getElementById('uv-overlay');
+        const hiddenCodes = document.querySelectorAll('.hidden-code');
+
+        // Obsługa przełączania latarek klawiszami F oraz R
+        window.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') return;
+
+            const key = e.key.toLowerCase();
+            if (key === 'f') {
+                flashlightOn = !flashlightOn;
+                if (flashlightOn) {
+                    uvLightOn = false;
+                    uvOverlay.style.display = 'none';
+                }
+                overlay.style.display = flashlightOn ? 'block' : 'none';
+                if (!flashlightOn) {
+                    hiddenCodes.forEach(code => code.style.opacity = '0');
+                }
+            } else if (key === 'r') {
+                uvLightOn = !uvLightOn;
+                if (uvLightOn) {
+                    flashlightOn = false;
+                    overlay.style.display = 'none';
+                }
+                uvOverlay.style.display = uvLightOn ? 'block' : 'none';
+                if (!uvLightOn) {
+                    hiddenCodes.forEach(code => code.style.opacity = '0');
+                }
+            }
+        });
+
+        // Śledzenie ruchu myszy dla snopów światła
+        window.addEventListener('mousemove', (e) => {
+            const x = e.clientX;
+            const y = e.clientY;
+
+            overlay.style.setProperty('--x', `${x}px`);
+            overlay.style.setProperty('--y', `${y}px`);
+            uvOverlay.style.setProperty('--x', `${x}px`);
+            uvOverlay.style.setProperty('--y', `${y}px`);
+
+            if (flashlightOn || uvLightOn) {
+                hiddenCodes.forEach(code => {
+                    const rect = code.getBoundingClientRect();
+                    const codeX = rect.left + rect.width / 2;
+                    const codeY = rect.top + rect.height / 2;
+                    const distance = Math.hypot(x - codeX, y - codeY);
+                    
+                    if (distance < 160) {
+                        code.style.opacity = '1';
+                    } else {
+                        code.style.opacity = '0';
+                    }
+                });
+            }
+        });
+
+        function togglePower() {
+            const screen = document.getElementById('screenContainer');
+            const led = document.getElementById('led');
+            
+            isPoweredOn = !isPoweredOn;
+
+            if (isPoweredOn) {
+                screen.classList.remove('off');
+                led.classList.add('on');
+                document.getElementById('screenContent').innerHTML = `<div style="width:100%; height:100%; background:url('${staticTvGif}') center/cover no-repeat;"></div>`;
+            } else {
+                screen.classList.add('off');
+                led.classList.remove('on');
+            }
+        }
+
+        function checkPassword() {
+            if (!isPoweredOn) return;
+
+            const inputVal = document.getElementById('passInput').value.trim().toLowerCase();
+            const screenContent = document.getElementById('screenContent');
+
+            if (inputVal === 'hell') {
+                screenContent.innerHTML = `<div style="width:100%; height:100%; background:url('${hellGif}') center/cover no-repeat;"></div>`;
+            } else if (inputVal === 'goji') {
+                screenContent.innerHTML = `<div style="width:100%; height:100%; background:url('${staticTvGif}') center/cover no-repeat;"></div><div style="position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.85); color:#34c759; padding:4px 8px; font-size:12px; border-radius:4px;">Przekierowanie do YouTube...</div>`;
+                setTimeout(() => {
+                    window.open("https://www.youtube.com/watch?v=EjNYWCH-fJw", "_blank");
+                }, 800);
+            } else if (inputVal !== '') {
+                screenContent.innerHTML = `<div style="width:100%; height:100%; background:url('${staticTvGif}') center/cover no-repeat;"></div><div style="position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.85); color:#ff3b30; padding:4px 8px; font-size:12px; border-radius:4px;">Błędny kod!</div>`;
+            }
+            
+            document.getElementById('passInput').value = '';
+        }
+
+        document.getElementById('passInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+    </script>
+</body>
+</html>
